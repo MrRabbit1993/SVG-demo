@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv=Content-Type content="text/html;charset=utf-8">
+    <title>动画：js脚本控制 力导图 (可以修改小球数量) _2 优化</title>
+    <style>
+        svg {
+            border: 1px solid #eee;
+        }
+    </style>
+</head>
+
+<body>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-400 -400 800 800" width="800" height="800">
+        <path id="links" fill="none" stroke="#eeeeee" />
+        <text id="text" fill="white"></text>
+    </svg>
+    <script src="./Vector.js"></script>
+    <script>
+    /**********************
+    * 力导图: 近乎弹簧的互作，近排斥，远吸引;
+    **********************/
+    var XML_NS="http://www.w3.org/2000/svg";
+    
+    
+    var k=0.1; //弹性系数，弹簧变形的距离和力之间的系数 F=k*delta; 尝试0.05比较好
+    
+    //建立点，简化为等质量的点，可以人一多个点
+    //todo map()函数
+    var points="a,b,c,d,e,f,g,h".split(",").map(function(name, index, arr){
+        return {
+            name: name,
+            color: 'hsl('+ (360/arr.length *index) +', 100%, 60%)',
+        }
+    });
+    
+    var relation=300; //互作为0的距离;
+    
+    var svg=document.querySelector('svg'), text=document.querySelector('text');
+    
+    function random(min, max){
+        return Math.round(min+(max-min)*Math.random());
+    }
+    
+    // todo forEach()函数
+    points.forEach(function(point){
+        //console.log(point) //{name: "a", color: "hsl(0, 100%, 60%)"}
+        var circle=document.createElementNS(XML_NS, 'circle'); //这个namespace写错是不能显示的！
+        //init position
+        var x=random(-300,300), y=random(-300,300); //调整到屏幕中心区域
+        circle.setAttribute('cx',x);
+        circle.setAttribute('cy',y);
+        circle.setAttribute('r',"10");
+        circle.setAttribute('fill',point.color);
+        
+        //绑定
+        point.circle=circle;
+        point.s=new Vector(x,y);//初始化位移
+        point.v=new Vector();//初始没有速度
+        point.a=new Vector();//初始没有加速度
+        
+        //加入到dom
+        svg.appendChild(circle);
+    });
+    
+    //获取上一帧的时间
+    var lastFrameTime = +new Date();
+    //更新当前帧
+    var w=0
+    
+    var links=document.getElementById('links');
+    function update(){
+        var frameTime= +new Date();//拿到当前帧的时间
+        var t=frameTime-lastFrameTime;//两帧时间差
+        //animation begin
+        
+        //对时间差(单位是ms)进行缩放，
+        t/=100; //缩放到1/5s为单位; 物理学单位是m，屏幕单位是px，尝试出来的换算关系;
+        
+        //更新点的位移、速度、加速度、力等
+        points.forEach(function(pa){
+            //console.log(pa)
+            var f=new Vector(); //定义一个空矢量，表示力
+            
+            //1.计算合力
+            points.forEach(function(pb){
+                //两两互作，排除掉自己和自己
+                if(pa.name==pb.name) return;
+                //console.log(w,'两两',pa.name, pb.name)
+                
+                var x=Vector.fromPoints(pa.s, pb.s);//点之间的距离
+                var delta=x.length()-relation;//自然长度之外的 弹性变量
+                
+                //求合力 f=k*x
+                f=f.add(x.normalize(delta * k)); //在x方向上，力(delta*k) 的投影的长度
+                
+            });
+            
+            //2.计算加速度 a=F/m; 简化质量都是m=1
+            pa.a=f;
+            
+            //3. 计算速度 vt=v0+a*t;
+            //如果没有能量损耗，系统将会一直运动下去。此处假设速度每次损耗2%，设置为0.98
+            pa.v=pa.v.add(pa.a.multiply(t)).multiply(0.98); //bug: 0.999时停止的慢，但是全部小球的质心不固定!
+            
+            //4. 计算位置 st=s0+v*t
+            pa.s=pa.s.add( pa.v.multiply(t) );
+            
+            //设置到dom上
+            pa.circle.setAttribute('cx',pa.s.x);
+            pa.circle.setAttribute('cy',pa.s.y);
+            
+        });
+        //前面计算
+        
+        //接着，根据计算结果，更新画面
+        render(); 
+        
+        //for debug only;
+        w+=1;
+        if(w%100==0){
+            console.log(' >>> steps=',w);
+        }
+        //2000步差不多正好，可以停止了，
+        //也可以设置其他停止条件，比如全部小球的变动小于某个值的时候，需要记录上一个小球的位置
+        if(w>2000){ 
+            return ;
+        }
+        
+        //animation end
+        lastFrameTime=frameTime;//当前帧的时间已经成历史
+        window.requestAnimationFrame(update);//更新画面
+    }
+    
+    //渲染
+    function render(){
+        //画点和点之间的连线
+        var linkPath=[];
+        points.forEach(function(pa){
+            var sa=pa.s;
+            points.forEach(function(pb){
+                if(pa.name==pb.name) return;
+                var sb=pb.s;
+                
+                linkPath=linkPath.concat([
+                    "M", sa.x,sa.y,
+                    'L', sb.x, sb.y,
+                ]);		
+            });
+        });
+        //绘制连线
+        links.setAttribute('d', linkPath.join(' ') );
+        
+        //为小球添加文字
+        text.innerHTML="";
+        function n2str(n){
+            return new String( n );
+        }
+        points.forEach(function(p){
+            var tspan=document.createElementNS(XML_NS, 'tspan');
+            tspan.setAttribute('x', n2str(p.s.x-5) )
+            tspan.setAttribute('y', n2str(p.s.y+5) )
+            tspan.innerHTML=p.name;
+            
+            text.appendChild(tspan);
+        });
+        svg.append(text);//重新把文字放到最后，也就是顶层
+    }
+    
+    
+    window.requestAnimationFrame(update);
+    </script>
+</body>
+
+</html>
