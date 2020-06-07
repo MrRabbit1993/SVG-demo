@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>星空</title>
+  <style>
+    html, body, svg {
+      padding: 0;
+      margin: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background: rgba(2, 17, 35);
+    }
+
+    svg * {
+      /*transition: transform 1s, opacity 1s;*/
+      transition: opacity 1s, transform 1s;
+    }
+
+  </style>
+</head>
+<body>
+<!--设置svg图像大小800,600-->
+<svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!--网格-->
+<!--  <g>-->
+<!--    <defs>-->
+<!--      <pattern height="49.5" id="grid" patternContentUnits="userSpaceOnUse"-->
+<!--               patternUnits="userSpaceOnUse"-->
+<!--               width="49.5">-->
+<!--        <path d="m 0 0 l 50 0 0 50 -50 0 0 -50" fill="none" stroke="rgba(255, 255, 0, .3)"-->
+<!--              stroke-dasharray="5"-->
+<!--              stroke-width="1"></path>-->
+<!--      </pattern>-->
+<!--    </defs>-->
+<!--    <rect fill="url(#grid)" height="100%" width="100%" x="0" y="0"></rect>-->
+<!--  </g>-->
+
+  <defs>
+    <path d="M 0 0 l 40 -18 18 -40 18 40 40 18 -40 18 -18 40 -18 -40 -40 -18"
+          id="star" stroke-linejoin="round"></path>
+  </defs>
+  <!--水面上-->
+  <g id="aboveWater">
+    <!--星星-->
+    <g id="starGroup"></g>
+    <!--灯塔-->
+    <g id="lighthouse" transform="scale(.5) translate(1300, 460)">
+      <defs>
+        <linearGradient id="lightBaseGradient">
+          <stop offset="0" stop-color="hsl(0, 3%, 80%)"></stop>
+          <stop offset="1" stop-color="hsl(0, 3%, 30%)"></stop>
+        </linearGradient>
+        <radialGradient id="glimmerGradient">
+          <stop offset="0" stop-color="hsl(0, 0%, 60%)" stop-opacity="1"></stop>
+          <stop offset="1" stop-color="hsl(0, 0%, 100%)" stop-opacity=".3"></stop>
+        </radialGradient>
+        <!--光束的裁切路径-->
+        <clipPath id="glimmerClipPath">
+          <path d="M 0 0 l -10000 0 0 600 z">
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from="0"
+              to="360"
+              dur="5s"
+              accumulate="sum"
+              repeatCount="999999"
+            ></animateTransform>
+          </path>
+        </clipPath>
+      </defs>
+      <!--灯塔的头-->
+      <circle cx="0" cy="0" fill="hsl(0, 0%, 80%)" r="5"></circle>
+      <!--灯塔的底座-->
+      <path d="M 0 0 m 0 5 l -15 135 l 30 0 -15 -135" fill="url(#lightBaseGradient)"></path>
+      <!--灯塔的光束-->
+      <!--    <path d="M 600 400 m 0 0 l -200 0 a 12.5 12.5 0 0 0 0 25 z "  fill="url(#glimmerGradient)"></path>-->
+      <!--使用裁切路径绘制光束-->
+      <ellipse
+        clip-path="url(#glimmerClipPath)"
+        cx="0" cy="0"
+        fill="url(#glimmerGradient)"
+        rx="400" ry="200">
+      </ellipse>
+    </g>
+    <!--月亮-->
+    <g id="moon">
+      <defs>
+        <mask id="moonMask">
+          <!--蒙版中，黑色的颜色会被过滤掉-->
+          <!--外部区域可见-->
+          <circle cx="0" cy="0" fill="#fff" r="100%"></circle>
+          <!--遮盖圆形区域-->
+          <ellipse cx="80" cy="100" fill="#000" rx="100" ry="110"
+                   transform="translate(70, -60)"></ellipse>
+        </mask>
+      </defs>
+      <!--使用蒙版制作残月-->
+      <circle cx="100" cy="100" fill="hsl(60, 90%, 50%)" mask="url(#moonMask)" r="100"></circle>
+    </g>
+  </g>
+  <line stroke="hsla(0, 10%, 90%, .3)" x1="0" x2="800" y1="300" y2="300"></line>
+  <g id="belowWater">
+    <defs>
+      <linearGradient id="waterLinearGradient" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#000"></stop>
+        <stop offset="1" stop-color="#fff"></stop>
+      </linearGradient>
+      <mask id="waterMask" maskContentUnits="objectBoundingBox" maskUnits="objectBoundingBox">
+        <rect fill="url(#waterLinearGradient)" height="1" id="temp" width="1" x="0"
+              y="0"></rect>
+      </mask>
+    </defs>
+    <!--    <use xlink:href="#temp"></use>-->
+    <use mask="url(#waterMask)" transform="translate(0 600) scale(1, -1)"
+         xlink:href="#aboveWater"></use>
+  </g>
+</svg>
+</body>
+<script>
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const XLINK_NS = 'http://www.w3.org/1999/xlink';
+  let startCount = 100;
+  const svgEle = document.querySelector('svg');
+  const svgWidth = 800, svgHeight = 600;
+
+  // 创建星星
+  function createStar() {
+    const starGroupEle = svgEle.querySelector('#starGroup');
+    while (startCount--) {
+      const useEle = document.createElementNS(SVG_NS, 'use');
+      const rndX = ~~(Math.random() * (svgWidth - 50));
+      const rndY = ~~(Math.random() * (svgHeight / 2));
+      // const rndX = 500, rndY = 600;
+      const rndOpacity = (Math.random() * .6).toFixed(2);
+      const rndScale = (Math.random() * .13).toFixed(2);
+      useEle.setAttributeNS(XLINK_NS, 'xlink:href', '#star');
+      // accessProp(useEle, {
+      //   fill: 'hsl(60, 100%, 50%)',
+      //   // x的数值会受到scale的影响
+      //   x: rndX / rndScale,
+      //   y: rndY /rndScale,
+      //   // 直接使用svg的transform会影响x的坐标
+      //   transform: `scale(${rndScale})`,
+      //   opacity: rndOpacity,
+      //   class: 'star'
+      // })
+
+      // 方案二，实现星星动画
+      accessProp(useEle, {
+        fill: 'hsl(60, 30%, 90%)',
+        opacity: .3,
+        transform: `translate(${svgWidth / 2}, ${0}) scale(${.1})`
+      });
+      starGroupEle.appendChild(useEle);
+
+      setTimeout(((rndX, rndY, rndScale) => () => {
+        // append之后再设置 css的transform属性和透明度
+        accessProp(useEle, {
+          opacity: rndOpacity,
+          transform: `translate(${rndX}, ${rndY}) scale(${rndScale})`
+        })
+      })(rndX, rndY, rndScale, startCount), 0)
+    }
+  }
+
+  createStar();
+
+
+  function accessStyle(elem, key, value) {
+    // elem, {name1: value1}，数据降低维度和下面同样的处理
+    // 此时的key是一个对象
+    if (key != null && typeof key === 'object') {
+      for (let name in key) accessStyle(elem, name, key[name])
+    }
+    // elem, 'name', 'value' | fn
+    else {
+      const isValueOfFn = typeof value === 'function';
+      elem.style[key] = isValueOfFn ? value.call(elem, elem, key) : value;
+    }
+
+    // 链式调用
+    return elem;
+  }
+
+  function accessProp(elem, key, value) {
+    // elem, {name1: value1}，数据降低维度和下面同样的处理
+    // 此时的key是一个对象
+    if (key != null && typeof key === 'object') {
+      for (let name in key) accessProp(elem, name, key[name])
+    }
+    // elem, 'name', 'value' | fn
+    else {
+      const isValueOfFn = typeof value === 'function';
+      elem.setAttribute(key, isValueOfFn ? value.call(elem, elem, key) : value);
+    }
+
+    // 链式调用
+    return elem;
+
+  }
+</script>
+</html>

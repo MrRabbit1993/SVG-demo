@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星空</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #001122;
+            line-height: 0;
+            font-size: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <svg width="100%" height="100%" viewBox="-400 -300 800 600" preserveAspectRation="xMidYMid slice">
+        <!--星星原型-->
+        <defs>
+            <!--创建引用，不引用看不到-->
+            <polygon id="start" points="0 -10 2 -2 10 0 2 2 0 10 -2 2 -10 0 -2 -2" fill="white"></polygon>
+        </defs>
+        <g id="real">
+            <!--星星原型-->
+            <!--星星组-->
+            <g id="start-group"></g>
+            <!--星星组-->
+            <!--灯塔组-->
+            <g id="light-tower" transform="translate(250,0)">
+                <!--灯塔渐变色-->
+                <defs>
+                    <!--线性渐变 控制灯塔，上面亮，下面暗-->
+                    <linearGradient id="tower" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#999"></stop>
+                        <stop offset="1" stop-color="#333"></stop>
+                    </linearGradient>
+                    <!--线性渐变-->
+                    <!--径向渐变 让灯塔射线远的地方暗-->
+                    <radialGradient id="light" cx="0.5" xy="0.5" r="0.5">
+                        <stop offset="0" stop-color="rgba(255,255,255,0.8)"></stop>
+                        <stop offset="1" stop-color="rgba(255,255,255,0)"></stop>
+                    </radialGradient>
+                    <!--径向渐变-->
+                    <!--拆切-->
+                    <clipPath id="light-mask">
+                        <!--用三角形得到光照的射线-->
+                        <polygon points="0 0 -400 -15 -400 15" fill="rgba(255,0,0,0.5)">
+                            <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0"
+                                to="360" dur="10s" repeatCount="indefinite"></animateTransform>
+                        </polygon>
+                        <circle cx="0" cy="0" r="2"></circle>
+                        <!--做一个灯-->
+                        <!--用三角形得到一个阴影-->
+                    </clipPath>
+                    <!--拆切-->
+                </defs>
+                <!--灯塔渐变色-->
+                <!--基座-->
+                <polygon points="0 0 5 50 -5 50" fill="url(#tower)"></polygon>
+                <!--基座-->
+                <!--灯圈 椭圆 通过拆切，得到射线-->
+                <ellipse cx="0" cy="0" rx="300" ry="100" fill="url(#light)" clip-path="url(#light-mask)">
+                </ellipse>
+                <!--灯圈-->
+            </g>
+            <!--灯塔组-->
+            <!--月亮-->
+            <g id="mooh-group">
+                <!--蒙版画月亮-->
+                <mask id="moon-mask">
+                    <circle cx="-250" cy="-150" r="100" fill="white"></circle>
+                    <circle cx="-200" cy="-200" r="100" fill="black"></circle>
+                </mask>
+                <circle cx="-250" cy="-150" r="100" fill="white" mask="url(#moon-mask)"></circle>
+            </g>
+            <!--月亮-->
+        </g>
+
+        <!--反射-->
+        <g id="reflact" transform="translate(0 50)" mask="url(#fading)">
+            <defs>
+            <!--线性渐变  湖面-->
+                <linearGradient id="fade" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="rgba(255,255,255,0.3)"></stop>
+                    <stop offset="0.5" stop-color="rgba(255,255,255,0)"></stop>
+                </linearGradient>
+                <mask id="fading">
+                    <rect x="-400" y="0" height="300" width="800" fill="url(#fade)"></rect>
+                </mask>
+            </defs>
+            <use xlink:href="#real" transform="scale(1,-1) translate(0 -50)" />
+            
+        </g>
+        <!--对称线 或者参考线-->
+        <line x1="-400" y1="50" x2="400" y2="50" stroke="white"></line>
+    </svg>
+    <script>
+        const SVG_NS = "http://www.w3.org/2000/svg" //svg 命名空间
+        const XLINK_NS = "http://www.w3.org/1999/xlink";
+        let svgContent = document.querySelector('svg')
+        renderStart()
+
+        function renderStart() {
+            let startCount = 500 //星星数量
+            const startRef = document.querySelector("#start") //星星原型
+            const startGroup = document.querySelector("#start-group") //星星分组
+            let start
+            while (startCount--) { //循环生成
+                start = use(startRef) //得到星星引用
+                start.setAttribute('transform',
+                    `translate(${random(-400,400)},${random(-300,50)}) scale(${random(0.1,0.6)})`
+                ) //设置星星位置 .把下面的位置流出，画湖面
+                start.setAttribute('opacity', random(0.1, 0.4)) //随机设置星星的透明度
+                startGroup.appendChild(start) //放入星星分组
+            }
+        }
+
+        function use(origin) {
+            let _use = document.createElementNS(SVG_NS, 'use') //得到标签
+            _use.setAttributeNS(XLINK_NS, "xlink:href", `#${origin.id}`) //设置属性(引用地址)
+            return _use
+        }
+        //生成两个数之前的数据数
+        function random(min, max) {
+            return Math.random() * (max - min) + min
+        }
+    </script>
+</body>
+
+</html>
